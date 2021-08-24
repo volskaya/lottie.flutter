@@ -5,11 +5,17 @@ import 'lottie_drawable.dart';
 import 'value_delegate.dart';
 
 // TODO(xha): recognize style Bold, Medium, Regular, SemiBold, etc...
-TextStyle defaultTextStyleDelegate(LottieFontStyle font) =>
-    TextStyle(fontFamily: font.fontFamily);
+TextStyle defaultTextStyleDelegate(LottieFontStyle font) => TextStyle(fontFamily: font.fontFamily);
 
 @immutable
 class LottieDelegates {
+  const LottieDelegates({
+    this.values = const <ValueDelegate>[],
+    this.text,
+    this.textStyle,
+    this.image,
+  });
+
   /// Specify a callback to dynamically changes the text displayed in the lottie
   /// animation.
   /// For instance, this is useful when you want to translate the text in the animation.
@@ -43,7 +49,7 @@ class LottieDelegates {
   ///   ),
   /// );
   /// ```
-  final List<ValueDelegate>? values;
+  final List<ValueDelegate> values;
 
   /// A callback to dynamically change an image of the animation.
   ///
@@ -65,20 +71,10 @@ class LottieDelegates {
   /// ```
   final ui.Image? Function(LottieComposition, LottieImageAsset)? image;
 
-  const LottieDelegates({
-    this.text,
-    this.textStyle,
-    this.values,
-    this.image,
-  });
-
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is LottieDelegates &&
-          text == other.text &&
-          textStyle == other.textStyle &&
-          values == other.values;
+      other is LottieDelegates && text == other.text && textStyle == other.textStyle && values == other.values;
 
   @override
   int get hashCode => hashValues(text, textStyle, values);

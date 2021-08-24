@@ -1,5 +1,6 @@
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
+
 import '../lottie.dart';
 import 'frame_rate.dart';
 import 'lottie_drawable.dart';
@@ -14,16 +15,19 @@ class RawLottie extends LeafRenderObjectWidget {
     Key? key,
     this.composition,
     this.delegates,
-    this.options,
-    double? progress,
-    this.frameRate,
+    this.options = const LottieOptions(),
+    this.progress = 0.0,
+    this.frameRate = FrameRate.max,
     this.width,
     this.height,
-    this.fit,
-    AlignmentGeometry? alignment,
-  })  : progress = progress ?? 0.0,
-        alignment = alignment ?? Alignment.center,
-        super(key: key);
+    this.fit = BoxFit.contain,
+    this.alignment = Alignment.center,
+    this.isComplex = false,
+    this.willChange = false,
+  }) : super(key: key);
+
+  final bool isComplex;
+  final bool willChange;
 
   /// The Lottie composition to display.
   final LottieComposition? composition;
@@ -31,7 +35,7 @@ class RawLottie extends LeafRenderObjectWidget {
   /// Allows to modify the Lottie animation at runtime
   final LottieDelegates? delegates;
 
-  final LottieOptions? options;
+  final LottieOptions options;
 
   /// The progress of the Lottie animation (between 0.0 and 1.0).
   final double progress;
@@ -39,7 +43,7 @@ class RawLottie extends LeafRenderObjectWidget {
   /// The number of frames per second to render.
   /// Use `FrameRate.composition` to use the original frame rate of the Lottie composition (default)
   /// Use `FrameRate.max` to advance the animation progression at every frame.
-  final FrameRate? frameRate;
+  final FrameRate frameRate;
 
   /// If non-null, require the Lottie composition to have this width.
   ///
@@ -54,7 +58,7 @@ class RawLottie extends LeafRenderObjectWidget {
   final double? height;
 
   /// How to inscribe the Lottie composition into the space allocated during layout.
-  final BoxFit? fit;
+  final BoxFit fit;
 
   /// How to align the composition within its bounds.
   ///
@@ -81,40 +85,43 @@ class RawLottie extends LeafRenderObjectWidget {
     return RenderLottie(
       composition: composition,
       delegates: delegates,
-      enableMergePaths: options?.enableMergePaths,
+      enableMergePaths: options.enableMergePaths,
+      antiAliasingSuggested: options.antiAliasingSuggested,
       progress: progress,
       frameRate: frameRate,
       width: width,
       height: height,
       fit: fit,
       alignment: alignment,
+      isComplex: isComplex,
+      willChange: willChange,
     );
   }
 
   @override
   void updateRenderObject(BuildContext context, RenderLottie renderObject) {
     renderObject
-      ..setComposition(composition,
-          progress: progress,
-          frameRate: frameRate,
-          delegates: delegates,
-          enableMergePaths: options?.enableMergePaths)
       ..width = width
       ..height = height
       ..alignment = alignment
-      ..fit = fit;
+      ..fit = fit
+      ..isComplex = isComplex
+      ..willChange = willChange
+      ..setComposition(
+        composition,
+        progress: progress,
+        delegates: delegates,
+        enableMergePaths: options.enableMergePaths,
+      );
   }
 
   @override
   void debugFillProperties(DiagnosticPropertiesBuilder properties) {
     super.debugFillProperties(properties);
-    properties.add(
-        DiagnosticsProperty<LottieComposition>('composition', composition));
+    properties.add(DiagnosticsProperty<LottieComposition>('composition', composition));
     properties.add(DoubleProperty('width', width, defaultValue: null));
     properties.add(DoubleProperty('height', height, defaultValue: null));
     properties.add(EnumProperty<BoxFit>('fit', fit, defaultValue: null));
-    properties.add(DiagnosticsProperty<AlignmentGeometry>(
-        'alignment', alignment,
-        defaultValue: null));
+    properties.add(DiagnosticsProperty<AlignmentGeometry>('alignment', alignment, defaultValue: null));
   }
 }

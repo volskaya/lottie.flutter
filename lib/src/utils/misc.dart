@@ -34,8 +34,7 @@ class MiscUtils {
     }
   }
 
-  static bool isAtLeastVersion(int major, int minor, int patch, int minMajor,
-      int minMinor, int minPatch) {
+  static bool isAtLeastVersion(int major, int minor, int patch, int minMajor, int minMinor, int minPatch) {
     if (major < minMajor) {
       return false;
     } else if (major > minMajor) {
@@ -51,8 +50,7 @@ class MiscUtils {
     return patch >= minPatch;
   }
 
-  static Color parseColor(String colorString,
-      {required Function(String) warningCallback}) {
+  static Color parseColor(String colorString, {required Function(String) LottieWarningCallback}) {
     if (colorString.isNotEmpty && colorString[0] == '#') {
       // Use a long to avoid rollovers on #ffXXXXXX
       var color = int.parse(colorString.substring(1), radix: 16);
@@ -60,13 +58,12 @@ class MiscUtils {
         // Set the alpha value
         color |= 0x00000000ff000000;
       } else if (colorString.length != 9) {
-        warningCallback('Unknown color colorString: $colorString');
+        LottieWarningCallback('Unknown color colorString: $colorString');
         return const Color(0xffffffff);
       }
       return Color(color);
     }
-    warningCallback(
-        'Unknown colorString is empty or format incorrect: $colorString');
+    LottieWarningCallback('Unknown colorString is empty or format incorrect: $colorString');
     return const Color(0xffffffff);
   }
 
@@ -90,11 +87,7 @@ class MiscUtils {
   ///
   /// Any {@link KeyPathElementContent} should call through to this as its implementation of
   /// {@link KeyPathElementContent#resolveKeyPath(KeyPath, int, List, KeyPath)}.
-  static void resolveKeyPath(
-      KeyPath keyPath,
-      int depth,
-      List<KeyPath> accumulator,
-      KeyPath currentPartialKeyPath,
+  static void resolveKeyPath(KeyPath keyPath, int depth, List<KeyPath> accumulator, KeyPath currentPartialKeyPath,
       KeyPathElementContent content) {
     if (keyPath.fullyResolvesTo(content.name, depth)) {
       currentPartialKeyPath = currentPartialKeyPath.addKey(content.name!);

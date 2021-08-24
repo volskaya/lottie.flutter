@@ -1,6 +1,8 @@
 import 'dart:ui' as ui;
+
 import 'package:flutter/rendering.dart';
 import 'package:vector_math/vector_math_64.dart';
+
 import 'composition.dart';
 import 'frame_rate.dart';
 import 'lottie_delegates.dart';
@@ -11,26 +13,26 @@ import 'utils.dart';
 import 'value_delegate.dart';
 
 class LottieDrawable {
+  LottieDrawable(
+    this.composition, {
+    this.enableMergePaths = false,
+    this.antiAliasingSuggested = true,
+    LottieDelegates? delegates,
+  }) : size = Size(composition.bounds.width.toDouble(), composition.bounds.height.toDouble()) {
+    this.delegates = delegates; // Make sure to call the `delegates` setter.
+    _compositionLayer = CompositionLayer(this, LayerParser.parse(composition), composition.layers, composition);
+  }
+
   final LottieComposition composition;
-  final _matrix = Matrix4.identity();
-  late CompositionLayer _compositionLayer;
   final Size size;
+  final bool enableMergePaths;
+  late CompositionLayer _compositionLayer;
+
+  final _matrix = Matrix4.identity();
+
   LottieDelegates? _delegates;
   bool _isDirty = true;
-  final bool enableMergePaths;
-
-  /// Gives a suggestion whether to paint with anti-aliasing, or not. Default is true.
   bool antiAliasingSuggested = true;
-
-  LottieDrawable(this.composition,
-      {LottieDelegates? delegates, bool? enableMergePaths})
-      : size = Size(composition.bounds.width.toDouble(),
-            composition.bounds.height.toDouble()),
-        enableMergePaths = enableMergePaths ?? false {
-    this.delegates = delegates;
-    _compositionLayer = CompositionLayer(
-        this, LayerParser.parse(composition), composition.layers, composition);
-  }
 
   CompositionLayer get compositionLayer => _compositionLayer;
 
@@ -52,14 +54,11 @@ class LottieDrawable {
 
   double get progress => _progress ?? 0.0;
   double? _progress;
-  bool setProgress(double value, {FrameRate? frameRate}) {
-    frameRate ??= FrameRate.composition;
-    var roundedProgress =
-        composition.roundProgress(value, frameRate: frameRate);
-    if (roundedProgress != _progress) {
+  bool setProgress(double value) {
+    if (value != _progress) {
       _isDirty = false;
-      _progress = roundedProgress;
-      _compositionLayer.setProgress(roundedProgress);
+      _progress = value;
+      _compositionLayer.setProgress(value);
       return _isDirty;
     } else {
       return false;
@@ -94,21 +93,18 @@ class LottieDrawable {
   }
 
   TextStyle getTextStyle(String font, String style) {
-    return (_delegates?.textStyle ?? defaultTextStyleDelegate)(
-        LottieFontStyle(fontFamily: font, style: style));
+    return (_delegates?.textStyle ?? defaultTextStyleDelegate)(LottieFontStyle(fontFamily: font, style: style));
   }
 
   List<ValueDelegate> _valueDelegates = <ValueDelegate>[];
   void _updateValueDelegates(List<ValueDelegate>? newDelegates) {
     if (identical(_valueDelegates, newDelegates)) return;
 
-    newDelegates ??= const [];
-
-    var delegates = <ValueDelegate>[];
+    newDelegates ??= const <ValueDelegate>[];
+    final delegates = <ValueDelegate>[];
 
     for (var newDelegate in newDelegates) {
-      var existingDelegate = _valueDelegates
-          .firstWhereOrNull((f) => f.isSameProperty(newDelegate));
+      var existingDelegate = _valueDelegates.firstWhereOrNull((f) => f.isSameProperty(newDelegate));
       if (existingDelegate != null) {
         var resolved = internalResolved(existingDelegate);
         resolved.updateDelegate(newDelegate);
@@ -141,39 +137,84 @@ class LottieDrawable {
     return keyPaths;
   }
 
-  void draw(ui.Canvas canvas, ui.Rect rect,
-      {BoxFit? fit, Alignment? alignment}) {
-    if (rect.isEmpty) {
-      return;
+  void draw(
+    ui.Canvas canvas,
+    ui.Rect rect, {
+    required BoxFit fit,
+    required Alignment alignment,
+  }) {
+    if (rect.isEmpty) return;
+
+    final canvasSize = rect.size;
+
+    final BoxFit effectiveFit;
+    switch (fit) {
+      case BoxFit.scaleDown: // I haven't implement logic for this.
+      case BoxFit.contain: // Couldn't get contain to work properly, but this fallback gives the correct behavior.
+        effectiveFit = canvasSize.width > canvasSize.height ? BoxFit.fitHeight : BoxFit.fitWidth;
+        break;
+      case BoxFit.none:
+      case BoxFit.cover: // Falling back to fitHeight / fitWidth gives the correct behavior.
+        effectiveFit = canvasSize.width < canvasSize.height ? BoxFit.fitHeight : BoxFit.fitWidth;
+        break;
+      case BoxFit.fill:
+      case BoxFit.fitWidth:
+      case BoxFit.fitHeight:
+        effectiveFit = fit;
+        break;
     }
 
-    fit ??= BoxFit.scaleDown;
-    alignment ??= Alignment.center;
-    var outputSize = rect.size;
-    var inputSize = size;
-    var fittedSizes = applyBoxFit(fit, inputSize, outputSize);
-    var sourceSize = fittedSizes.source;
-    var destinationSize = fittedSizes.destination;
-    var halfWidthDelta = (outputSize.width - destinationSize.width) / 2.0;
-    var halfHeightDelta = (outputSize.height - destinationSize.height) / 2.0;
-    var dx = halfWidthDelta + alignment.x * halfWidthDelta;
-    var dy = halfHeightDelta + alignment.y * halfHeightDelta;
-    var destinationPosition = rect.topLeft.translate(dx, dy);
-    var destinationRect = destinationPosition & destinationSize;
-    var sourceRect = alignment.inscribe(sourceSize, Offset.zero & inputSize);
+    final sizes = applyBoxFit(effectiveFit, size, canvasSize);
+    final translation = alignment.alongSize(sizes.destination);
+    final scaleX = sizes.destination.width / size.width;
+    final scaleY = sizes.destination.height / size.height;
 
-    canvas.save();
-    canvas.translate(destinationRect.left, destinationRect.top);
+    // canvas.save();
     _matrix.setIdentity();
-    _matrix.scale(destinationRect.size.width / sourceRect.width,
-        destinationRect.size.height / sourceRect.height);
+
+    switch (effectiveFit) {
+      case BoxFit.fill:
+        _matrix
+          ..translate(
+            -(size.width / 2.0 * scaleX) + translation.dx,
+            -(size.height / 2.0 * scaleY) + translation.dy,
+          )
+          ..scale(scaleX, scaleY);
+        break;
+      case BoxFit.fitWidth:
+        _matrix
+          ..translate(
+            -(size.width / 2.0 * scaleX) + translation.dx,
+            -(size.height / 2.0 * scaleX) + translation.dy,
+          )
+          ..scale(scaleX);
+        break;
+      case BoxFit.fitHeight:
+        _matrix
+          ..translate(
+            -(size.width / 2.0 * scaleY) + translation.dx,
+            -(size.height / 2.0 * scaleY) + translation.dy,
+          )
+          ..scale(scaleY);
+        break;
+      case BoxFit.none:
+      case BoxFit.cover:
+      case BoxFit.scaleDown:
+      case BoxFit.contain:
+        throw UnsupportedError('effectiveFit should not have been $effectiveFit at this part of the code');
+    }
+
     _compositionLayer.draw(canvas, rect.size, _matrix, parentAlpha: 255);
-    canvas.restore();
+    // canvas.restore();
   }
 }
 
 class LottieFontStyle {
-  final String fontFamily, style;
+  const LottieFontStyle({
+    required this.fontFamily,
+    required this.style,
+  });
 
-  LottieFontStyle({required this.fontFamily, required this.style});
+  final String fontFamily;
+  final String style;
 }

@@ -135,8 +135,7 @@ class LayerParser {
           solidHeight = (reader.nextInt() * window.devicePixelRatio).round();
           break;
         case 7:
-          solidColor = MiscUtils.parseColor(reader.nextString(),
-              warningCallback: composition.addWarning);
+          solidColor = MiscUtils.parseColor(reader.nextString(), LottieWarningCallback: composition.addWarning);
           break;
         case 8:
           transform = AnimatableTransformParser.parse(reader, composition);
@@ -178,14 +177,12 @@ class LayerParser {
           while (reader.hasNext()) {
             switch (reader.selectName(_textNames)) {
               case 0:
-                text = AnimatableValueParser.parseDocumentData(
-                    reader, composition);
+                text = AnimatableValueParser.parseDocumentData(reader, composition);
                 break;
               case 1:
                 reader.beginArray();
                 if (reader.hasNext()) {
-                  textProperties =
-                      AnimatableTextPropertiesParser.parse(reader, composition);
+                  textProperties = AnimatableTextPropertiesParser.parse(reader, composition);
                 }
                 while (reader.hasNext()) {
                   reader.skipValue();
@@ -217,8 +214,7 @@ class LayerParser {
             reader.endObject();
           }
           reader.endArray();
-          composition.addWarning(
-              "Lottie doesn't support layer effects. If you are using them for "
+          composition.addWarning("Lottie doesn't support layer effects. If you are using them for "
               ' fills, strokes, trim paths etc. then try adding them directly as contents '
               ' in your shape. Found: $effectNames');
           break;
@@ -241,8 +237,7 @@ class LayerParser {
           outFrame = reader.nextDouble();
           break;
         case 20:
-          timeRemapping = AnimatableValueParser.parseFloat(reader, composition,
-              isDp: false);
+          timeRemapping = AnimatableValueParser.parseFloat(reader, composition, isDp: false);
           break;
         case 21:
           cl = reader.nextString();
@@ -261,34 +256,21 @@ class LayerParser {
     // Before the in frame
     if (inFrame > 0) {
       var preKeyframe = Keyframe<double>(composition,
-          startValue: 0.0,
-          endValue: 0.0,
-          interpolator: null,
-          startFrame: 0.0,
-          endFrame: inFrame);
+          startValue: 0.0, endValue: 0.0, interpolator: null, startFrame: 0.0, endFrame: inFrame);
       inOutKeyframes.add(preKeyframe);
     }
 
     outFrame = outFrame > 0 ? outFrame : composition.endFrame;
     var visibleKeyframe = Keyframe<double>(composition,
-        startValue: 1.0,
-        endValue: 1.0,
-        interpolator: null,
-        startFrame: inFrame,
-        endFrame: outFrame);
+        startValue: 1.0, endValue: 1.0, interpolator: null, startFrame: inFrame, endFrame: outFrame);
     inOutKeyframes.add(visibleKeyframe);
 
     var outKeyframe = Keyframe<double>(composition,
-        startValue: 0.0,
-        endValue: 0.0,
-        interpolator: null,
-        startFrame: outFrame,
-        endFrame: double.maxFinite);
+        startValue: 0.0, endValue: 0.0, interpolator: null, startFrame: outFrame, endFrame: double.maxFinite);
     inOutKeyframes.add(outKeyframe);
 
     if (layerName.endsWith('.ai') || 'ai' == cl) {
-      composition
-          .addWarning('Convert your Illustrator layers to shape layers.');
+      composition.addWarning('Convert your Illustrator layers to shape layers.');
     }
 
     return Layer(

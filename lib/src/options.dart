@@ -1,4 +1,9 @@
 class LottieOptions {
+  const LottieOptions({
+    this.enableMergePaths = false,
+    this.antiAliasingSuggested = true,
+  });
+
   /// Enable merge path support.
   ///
   /// Merge paths currently don't work if the the operand shape is entirely contained within the
@@ -6,6 +11,6 @@ class LottieOptions {
   /// instead of using merge paths.
   final bool enableMergePaths;
 
-  LottieOptions({bool? enableMergePaths})
-      : enableMergePaths = enableMergePaths ?? false;
+  /// Gives a suggestion whether to paint with anti-aliasing, or not. Default is true.
+  final bool antiAliasingSuggested;
 }
