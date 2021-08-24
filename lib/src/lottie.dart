@@ -48,6 +48,7 @@ class Lottie extends StatefulWidget {
     required this.lottie,
     this.frameRate = FrameRate.max,
     this.animate = true,
+    this.tailAnimation = true,
     this.reverse = false,
     this.repeat = true,
     this.delegates,
@@ -63,8 +64,7 @@ class Lottie extends StatefulWidget {
     this.onWarning,
     this.interval = Duration.zero,
     this.delay = Duration.zero,
-  })  : _preferRepeatingSimulation = delay == Duration.zero && interval == Duration.zero,
-        super(key: key);
+  }) : super(key: key);
 
   /// Creates a widget that displays an [LottieComposition] obtained from the network.
   Lottie.network(
@@ -74,6 +74,7 @@ class Lottie extends StatefulWidget {
     Map<String, String>? headers,
     this.frameRate = FrameRate.max,
     this.animate = true,
+    this.tailAnimation = true,
     this.reverse = false,
     this.repeat = true,
     this.delegates,
@@ -90,7 +91,6 @@ class Lottie extends StatefulWidget {
     this.interval = Duration.zero,
     this.delay = Duration.zero,
   })  : lottie = NetworkLottie(src, headers: headers, imageProviderFactory: imageProviderFactory),
-        _preferRepeatingSimulation = delay == Duration.zero && interval == Duration.zero,
         super(key: key);
 
   /// Creates a widget that displays an [LottieComposition] obtained from a [File].
@@ -109,6 +109,7 @@ class Lottie extends StatefulWidget {
     LottieImageProviderFactory? imageProviderFactory,
     this.frameRate = FrameRate.max,
     this.animate = true,
+    this.tailAnimation = true,
     this.reverse = false,
     this.repeat = true,
     this.delegates,
@@ -125,7 +126,6 @@ class Lottie extends StatefulWidget {
     this.interval = Duration.zero,
     this.delay = Duration.zero,
   })  : lottie = FileLottie(file, imageProviderFactory: imageProviderFactory),
-        _preferRepeatingSimulation = delay == Duration.zero && interval == Duration.zero,
         super(key: key);
 
   /// Creates a widget that displays an [LottieComposition] obtained from an [AssetBundle].
@@ -137,6 +137,7 @@ class Lottie extends StatefulWidget {
     AssetBundle? bundle,
     this.frameRate = FrameRate.max,
     this.animate = true,
+    this.tailAnimation = true,
     this.reverse = false,
     this.repeat = true,
     this.delegates,
@@ -153,7 +154,6 @@ class Lottie extends StatefulWidget {
     this.interval = Duration.zero,
     this.delay = Duration.zero,
   })  : lottie = AssetLottie(name, bundle: bundle, package: package, imageProviderFactory: imageProviderFactory),
-        _preferRepeatingSimulation = delay == Duration.zero && interval == Duration.zero,
         super(key: key);
 
   /// Creates a widget that displays an [LottieComposition] obtained from a [Uint8List].
@@ -163,6 +163,7 @@ class Lottie extends StatefulWidget {
     LottieImageProviderFactory? imageProviderFactory,
     this.frameRate = FrameRate.max,
     this.animate = true,
+    this.tailAnimation = true,
     this.reverse = false,
     this.repeat = true,
     this.delegates,
@@ -179,10 +180,7 @@ class Lottie extends StatefulWidget {
     this.interval = Duration.zero,
     this.delay = Duration.zero,
   })  : lottie = MemoryLottie(bytes, imageProviderFactory: imageProviderFactory),
-        _preferRepeatingSimulation = delay == Duration.zero && interval == Duration.zero,
         super(key: key);
-
-  final bool _preferRepeatingSimulation;
 
   /// Interval between repeating animations.
   final Duration interval;
@@ -210,6 +208,10 @@ class Lottie extends StatefulWidget {
   ///
   /// See [repeat] to control whether the animation should repeat.
   final bool animate;
+
+  /// Allow animation to tail off and end, when the animation controller completes, when
+  /// [animate] got toggled off.
+  final bool tailAnimation;
 
   /// Specify that the automatic animation should repeat in a loop (default to true).
   /// The property has no effect if [animate] is false or [controller] is not null.
@@ -446,22 +448,19 @@ class _LottieState extends State<Lottie> with SingleTickerProviderStateMixin<Lot
 
   void _handleToggle() {
     final wasAnimating = _controller.isAnimating;
+    final tailAnimation = _controller.isAnimating && !widget.animate && widget.tailAnimation;
 
     // Stop anything that could still animate the controller.
     _intervalTimer?.cancel();
-    _controller.stop();
 
+    if (!tailAnimation) _controller.stop();
     if (!widget.animate) return; // Not needed to begin the animation.
 
-    if (widget.repeat && widget._preferRepeatingSimulation) {
-      _controller.repeat(reverse: widget.reverse); // Prefer the repeating simulation, when possible.
+    final delay = !wasAnimating ? widget.delay : widget.interval;
+    if (delay > Duration.zero) {
+      _scheduleForward(delay);
     } else {
-      final delay = !wasAnimating ? widget.delay : widget.interval;
-      if (delay > Duration.zero) {
-        _scheduleForward(delay);
-      } else {
-        _controller.forward();
-      }
+      _controller.forward();
     }
   }
 

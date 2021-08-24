@@ -17,26 +17,21 @@ class AssetLottie extends LottieProvider {
   }) : super(imageProviderFactory: imageProviderFactory);
 
   final String assetName;
-  String get keyName =>
-      package == null ? assetName : 'packages/$package/$assetName';
-
   final AssetBundle? bundle;
-
   final String? package;
+
+  String get keyName => package == null ? assetName : 'packages/$package/$assetName';
 
   @override
   Future<LottieComposition> load() async {
     var cacheKey = 'asset-$keyName-$bundle';
     return sharedLottieCache.putIfAbsent(cacheKey, () async {
       final chosenBundle = bundle ?? rootBundle;
+      final data = await chosenBundle.load(keyName);
+      final composition = await LottieComposition.fromByteData(data,
+          name: p.url.basenameWithoutExtension(keyName), imageProviderFactory: imageProviderFactory);
 
-      var data = await chosenBundle.load(keyName);
-
-      var composition = await LottieComposition.fromByteData(data,
-          name: p.url.basenameWithoutExtension(keyName),
-          imageProviderFactory: imageProviderFactory);
-
-      for (var image in composition.images.values) {
+      for (final image in composition.images.values) {
         image.loadedImage ??= await _loadImage(composition, image);
       }
 
@@ -44,15 +39,12 @@ class AssetLottie extends LottieProvider {
     });
   }
 
-  Future<ui.Image?> _loadImage(
-      LottieComposition composition, LottieImageAsset lottieImage) {
+  Future<ui.Image?> _loadImage(LottieComposition composition, LottieImageAsset lottieImage) {
     var imageProvider = getImageProvider(lottieImage);
 
     if (imageProvider == null) {
-      var imageAssetPath = p.url.join(
-          p.dirname(assetName), lottieImage.dirName, lottieImage.fileName);
-      imageProvider =
-          AssetImage(imageAssetPath, bundle: bundle, package: package);
+      var imageAssetPath = p.url.join(p.dirname(assetName), lottieImage.dirName, lottieImage.fileName);
+      imageProvider = AssetImage(imageAssetPath, bundle: bundle, package: package);
     }
 
     return loadImage(composition, lottieImage, imageProvider);
@@ -61,9 +53,7 @@ class AssetLottie extends LottieProvider {
   @override
   bool operator ==(dynamic other) {
     if (other.runtimeType != runtimeType) return false;
-    return other is AssetLottie &&
-        other.keyName == keyName &&
-        other.bundle == bundle;
+    return other is AssetLottie && other.keyName == keyName && other.bundle == bundle;
   }
 
   @override
