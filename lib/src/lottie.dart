@@ -607,7 +607,13 @@ class _LottieState extends State<Lottie> with SingleTickerProviderStateMixin<Lot
       isComplex: true,
     );
 
-    final repaintBoundary = widget.addRepaintBoundary ? RepaintBoundary(child: lottieWidget) : lottieWidget;
+    final repaintBoundary = widget.addRepaintBoundary
+        ? RepaintBoundary(
+            key: lottieWidget.key,
+            child: lottieWidget,
+          )
+        : lottieWidget;
+
     return widget.frameBuilder?.call(context, repaintBoundary, _composition) ?? repaintBoundary;
   }
 
