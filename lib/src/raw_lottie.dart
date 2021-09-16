@@ -13,10 +13,10 @@ class RawLottie extends LeafRenderObjectWidget {
   /// Creates a widget that displays a Lottie composition.
   const RawLottie({
     Key? key,
+    required this.animation,
     this.composition,
     this.delegates,
     this.options = const LottieOptions(),
-    this.progress = 0.0,
     this.frameRate = FrameRate.max,
     this.width,
     this.height,
@@ -24,10 +24,14 @@ class RawLottie extends LeafRenderObjectWidget {
     this.alignment = Alignment.center,
     this.isComplex = false,
     this.willChange = false,
+    this.scale = 1.0,
   }) : super(key: key);
 
   final bool isComplex;
   final bool willChange;
+
+  /// The scaling to apply to the paint matrix.
+  final double scale;
 
   /// The Lottie composition to display.
   final LottieComposition? composition;
@@ -36,9 +40,6 @@ class RawLottie extends LeafRenderObjectWidget {
   final LottieDelegates? delegates;
 
   final LottieOptions options;
-
-  /// The progress of the Lottie animation (between 0.0 and 1.0).
-  final double progress;
 
   /// The number of frames per second to render.
   /// Use `FrameRate.composition` to use the original frame rate of the Lottie composition (default)
@@ -80,6 +81,8 @@ class RawLottie extends LeafRenderObjectWidget {
   ///    relative to text direction.
   final AlignmentGeometry alignment;
 
+  final Animation<double> animation;
+
   @override
   RenderLottie createRenderObject(BuildContext context) {
     return RenderLottie(
@@ -87,7 +90,7 @@ class RawLottie extends LeafRenderObjectWidget {
       delegates: delegates,
       enableMergePaths: options.enableMergePaths,
       antiAliasingSuggested: options.antiAliasingSuggested,
-      progress: progress,
+      animation: animation,
       frameRate: frameRate,
       width: width,
       height: height,
@@ -95,6 +98,7 @@ class RawLottie extends LeafRenderObjectWidget {
       alignment: alignment,
       isComplex: isComplex,
       willChange: willChange,
+      scale: scale,
     );
   }
 
@@ -107,9 +111,10 @@ class RawLottie extends LeafRenderObjectWidget {
       ..fit = fit
       ..isComplex = isComplex
       ..willChange = willChange
+      ..scale = scale
+      ..animation = animation
       ..setComposition(
         composition,
-        progress: progress,
         delegates: delegates,
         enableMergePaths: options.enableMergePaths,
       );
@@ -122,6 +127,7 @@ class RawLottie extends LeafRenderObjectWidget {
     properties.add(DoubleProperty('width', width, defaultValue: null));
     properties.add(DoubleProperty('height', height, defaultValue: null));
     properties.add(EnumProperty<BoxFit>('fit', fit, defaultValue: null));
+    properties.add(EnumProperty<double>('scale', scale, defaultValue: 1.0));
     properties.add(DiagnosticsProperty<AlignmentGeometry>('alignment', alignment, defaultValue: null));
   }
 }

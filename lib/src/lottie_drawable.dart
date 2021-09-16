@@ -4,7 +4,6 @@ import 'package:flutter/rendering.dart';
 import 'package:vector_math/vector_math_64.dart';
 
 import 'composition.dart';
-import 'frame_rate.dart';
 import 'lottie_delegates.dart';
 import 'model/key_path.dart';
 import 'model/layer/composition_layer.dart';
@@ -142,6 +141,7 @@ class LottieDrawable {
     ui.Rect rect, {
     required BoxFit fit,
     required Alignment alignment,
+    double scale = 1.0,
   }) {
     if (rect.isEmpty) return;
 
@@ -166,8 +166,8 @@ class LottieDrawable {
 
     final sizes = applyBoxFit(effectiveFit, size, canvasSize);
     final translation = alignment.alongSize(sizes.destination);
-    final scaleX = sizes.destination.width / size.width;
-    final scaleY = sizes.destination.height / size.height;
+    final scaleX = sizes.destination.width / size.width * scale;
+    final scaleY = sizes.destination.height / size.height * scale;
 
     // canvas.save();
     _matrix.setIdentity();

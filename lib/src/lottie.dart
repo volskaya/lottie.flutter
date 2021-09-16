@@ -64,6 +64,7 @@ class Lottie extends StatefulWidget {
     this.onWarning,
     this.interval = Duration.zero,
     this.delay = Duration.zero,
+    this.scale = 1.0,
   }) : super(key: key);
 
   /// Creates a widget that displays an [LottieComposition] obtained from the network.
@@ -90,6 +91,7 @@ class Lottie extends StatefulWidget {
     this.onWarning,
     this.interval = Duration.zero,
     this.delay = Duration.zero,
+    this.scale = 1.0,
   })  : lottie = NetworkLottie(src, headers: headers, imageProviderFactory: imageProviderFactory),
         super(key: key);
 
@@ -125,6 +127,7 @@ class Lottie extends StatefulWidget {
     this.onWarning,
     this.interval = Duration.zero,
     this.delay = Duration.zero,
+    this.scale = 1.0,
   })  : lottie = FileLottie(file, imageProviderFactory: imageProviderFactory),
         super(key: key);
 
@@ -153,6 +156,7 @@ class Lottie extends StatefulWidget {
     this.onWarning,
     this.interval = Duration.zero,
     this.delay = Duration.zero,
+    this.scale = 1.0,
   })  : lottie = AssetLottie(name, bundle: bundle, package: package, imageProviderFactory: imageProviderFactory),
         super(key: key);
 
@@ -179,6 +183,7 @@ class Lottie extends StatefulWidget {
     this.onWarning,
     this.interval = Duration.zero,
     this.delay = Duration.zero,
+    this.scale = 1.0,
   })  : lottie = MemoryLottie(bytes, imageProviderFactory: imageProviderFactory),
         super(key: key);
 
@@ -409,6 +414,9 @@ class Lottie extends StatefulWidget {
   /// ```
   final ImageErrorWidgetBuilder? errorBuilder;
 
+  /// The scaling to apply to the paint matrix.
+  final double scale;
+
   @override
   _LottieState createState() => _LottieState();
 
@@ -420,6 +428,7 @@ class Lottie extends StatefulWidget {
     properties.add(DoubleProperty('width', width, defaultValue: null));
     properties.add(DoubleProperty('height', height, defaultValue: null));
     properties.add(EnumProperty<BoxFit>('fit', fit, defaultValue: null));
+    properties.add(EnumProperty<double>('scale', scale, defaultValue: 1.0));
     properties.add(DiagnosticsProperty<AlignmentGeometry>('alignment', alignment, defaultValue: null));
   }
 }
@@ -464,16 +473,6 @@ class _LottieState extends State<Lottie> with SingleTickerProviderStateMixin<Lot
     }
   }
 
-  void _handleAnimation() {
-    if (_error != null || _composition == null) return;
-
-    final progress = _composition!.roundProgress(_controller.value, frameRate: widget.frameRate);
-    if (progress != _progress) {
-      _progress = progress;
-      markNeedsBuild();
-    }
-  }
-
   void _handleAnimationStatus(AnimationStatus status) {
     switch (status) {
       case AnimationStatus.dismissed:
@@ -509,9 +508,7 @@ class _LottieState extends State<Lottie> with SingleTickerProviderStateMixin<Lot
       vsync: this,
       duration: _composition?.duration ?? _kDefaultDuration,
       animationBehavior: AnimationBehavior.preserve,
-    )
-      ..addStatusListener(_handleAnimationStatus)
-      ..addListener(_handleAnimation);
+    )..addStatusListener(_handleAnimationStatus);
 
     _handleToggle();
     _loadComposition();
@@ -596,12 +593,13 @@ class _LottieState extends State<Lottie> with SingleTickerProviderStateMixin<Lot
       composition: _composition,
       delegates: widget.delegates,
       options: widget.options,
-      progress: _progress,
+      animation: _controller,
       frameRate: widget.frameRate,
       width: widget.width,
       height: widget.height,
       fit: widget.fit,
       alignment: widget.alignment,
+      scale: widget.scale,
       willChange: widget.animate,
       isComplex: true,
     );

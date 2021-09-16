@@ -1,3 +1,4 @@
+import 'package:flutter/animation.dart';
 import 'package:flutter/rendering.dart';
 import '../lottie.dart';
 import 'frame_rate.dart';
@@ -10,6 +11,7 @@ import 'lottie_drawable.dart';
 class RenderLottie extends RenderBox {
   RenderLottie({
     required LottieComposition? composition,
+    required Animation<double> animation,
     LottieDelegates? delegates,
     bool enableMergePaths = false,
     bool antiAliasingSuggested = true,
@@ -19,9 +21,16 @@ class RenderLottie extends RenderBox {
     double? height,
     BoxFit fit = BoxFit.contain,
     AlignmentGeometry alignment = Alignment.center,
+    double scale = 1.0,
     this.isComplex = false,
     this.willChange = false,
   })  : assert(progress >= 0.0 && progress <= 1.0),
+        _animation = animation,
+        _width = width,
+        _height = height,
+        _fit = fit,
+        _alignment = alignment,
+        _scale = scale,
         _drawable = composition != null
             ? (LottieDrawable(
                 composition,
@@ -30,24 +39,21 @@ class RenderLottie extends RenderBox {
               )
               ..setProgress(progress)
               ..delegates = delegates)
-            : null,
-        _width = width,
-        _height = height,
-        _fit = fit,
-        _alignment = alignment;
+            : null;
 
   bool isComplex;
   bool willChange;
+  LottieDrawable? _drawable;
 
   /// The lottie composition to display.
-  LottieComposition? get composition => _drawable?.composition;
-  LottieDrawable? _drawable;
+  LottieComposition get composition => _drawable!.composition;
   void setComposition(
     LottieComposition? composition, {
-    required double progress,
     required LottieDelegates? delegates,
     bool? enableMergePaths,
   }) {
+    assert(_animation != null); // Set animation first.
+
     var drawable = _drawable;
     enableMergePaths ??= false;
 
@@ -66,7 +72,7 @@ class RenderLottie extends RenderBox {
         needsPaint = true;
       }
 
-      needsPaint |= drawable.setProgress(progress);
+      _updateProgress();
 
       if (drawable.delegates != delegates) {
         drawable.delegates = delegates;
@@ -80,6 +86,49 @@ class RenderLottie extends RenderBox {
     if (needsLayout && (_width == null || _height == null)) {
       markNeedsLayout();
     }
+  }
+
+  double? _previousEffectiveProgress;
+  bool _updateProgress() {
+    final effectiveProgress = composition.roundProgress(animation.value, frameRate: frameRate);
+    if (_previousEffectiveProgress != effectiveProgress) {
+      _previousEffectiveProgress = effectiveProgress;
+      if (_drawable != null) {
+        _drawable!.setProgress(effectiveProgress);
+        markNeedsPaint();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  Animation<double> get animation => _animation!;
+  Animation<double>? _animation;
+  set animation(Animation<double> value) {
+    if (_animation == value) return;
+    if (attached && _animation != null) animation.removeListener(_updateProgress);
+    _animation = value;
+    if (attached) animation.addListener(_updateProgress);
+    _updateProgress();
+  }
+
+  double get scale => _scale;
+  double _scale = 1.0;
+  set scale(double value) {
+    if (value == _scale) {
+      return;
+    }
+    _scale = value;
+    markNeedsPaint();
+  }
+
+  FrameRate get frameRate => _frameRate;
+  FrameRate _frameRate = FrameRate.max;
+  set frameRate(FrameRate value) {
+    if (value == _frameRate) {
+      return;
+    }
+    _frameRate = value;
   }
 
   /// If non-null, requires the composition to have this width.
@@ -205,6 +254,19 @@ class RenderLottie extends RenderBox {
   }
 
   @override
+  void attach(covariant PipelineOwner owner) {
+    super.attach(owner);
+    animation.addListener(_updateProgress);
+    _updateProgress();
+  }
+
+  @override
+  void detach() {
+    animation.removeListener(_updateProgress);
+    super.detach();
+  }
+
+  @override
   void paint(PaintingContext context, Offset offset) {
     if (_drawable == null) return;
 
@@ -214,6 +276,7 @@ class RenderLottie extends RenderBox {
       offset & size,
       fit: _fit,
       alignment: _alignment.resolve(TextDirection.ltr),
+      scale: scale,
     );
   }
 
