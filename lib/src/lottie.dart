@@ -447,6 +447,7 @@ class _LottieState extends State<Lottie> with SingleTickerProviderStateMixin<Lot
   void _handleCompositionLoaded(LottieComposition composition) {
     _composition = composition;
     _controller.duration = composition.duration;
+    _handleToggle();
     widget.onLoaded?.call(composition);
   }
 
@@ -456,6 +457,8 @@ class _LottieState extends State<Lottie> with SingleTickerProviderStateMixin<Lot
   }
 
   void _handleToggle() {
+    if (_composition == null) return;
+
     final wasAnimating = _controller.isAnimating;
     final tailAnimation = _controller.isAnimating && !widget.animate && widget.tailAnimation;
 
@@ -476,7 +479,8 @@ class _LottieState extends State<Lottie> with SingleTickerProviderStateMixin<Lot
   void _handleAnimationStatus(AnimationStatus status) {
     switch (status) {
       case AnimationStatus.dismissed:
-        if (widget.animate) {
+        if (widget.animate && widget.repeat) {
+          print('repeat');
           if (widget.interval > Duration.zero) {
             _scheduleForward();
           } else {
@@ -488,10 +492,12 @@ class _LottieState extends State<Lottie> with SingleTickerProviderStateMixin<Lot
         if (widget.animate) {
           if (widget.reverse) {
             _controller.reverse();
-          } else if (widget.interval > Duration.zero) {
-            _scheduleForward();
-          } else {
-            _controller.forward(from: 0.0);
+          } else if (widget.repeat) {
+            if (widget.interval > Duration.zero) {
+              _scheduleForward();
+            } else if (widget.repeat) {
+              _controller.forward(from: 0.0);
+            }
           }
         }
         break;
@@ -513,12 +519,12 @@ class _LottieState extends State<Lottie> with SingleTickerProviderStateMixin<Lot
     _handleToggle();
     _loadComposition();
 
-    WidgetsBinding.instance!.addObserver(this);
+    WidgetsBinding.instance.addObserver(this);
   }
 
   @override
   void dispose() {
-    WidgetsBinding.instance!.removeObserver(this);
+    WidgetsBinding.instance.removeObserver(this);
     _controller.dispose();
     _intervalTimer?.cancel();
     super.dispose();
@@ -566,13 +572,13 @@ class _LottieState extends State<Lottie> with SingleTickerProviderStateMixin<Lot
         _error = null;
         _errorStacktrace = null;
         _handleCompositionLoaded(composition);
-        markNeedsBuild();
+        setState(() {});
       }
     } catch (e, t) {
       if (mounted) {
         _error = e;
         _errorStacktrace = t;
-        markNeedsBuild();
+        setState(() {});
       }
       rethrow;
     }

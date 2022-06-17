@@ -46,7 +46,7 @@ class RenderLottie extends RenderBox {
   LottieDrawable? _drawable;
 
   /// The lottie composition to display.
-  LottieComposition get composition => _drawable!.composition;
+  LottieComposition? get composition => _drawable?.composition;
   void setComposition(
     LottieComposition? composition, {
     required LottieDelegates? delegates,
@@ -90,7 +90,7 @@ class RenderLottie extends RenderBox {
 
   double? _previousEffectiveProgress;
   bool _updateProgress() {
-    final effectiveProgress = composition.roundProgress(animation.value, frameRate: frameRate);
+    final effectiveProgress = composition?.roundProgress(animation.value, frameRate: frameRate) ?? 0;
     if (_previousEffectiveProgress != effectiveProgress) {
       _previousEffectiveProgress = effectiveProgress;
       if (_drawable != null) {
